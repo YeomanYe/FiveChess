@@ -42,14 +42,25 @@ window.onload = function() {
     var $wrap = $("#wrap"),
         minSize = 0,
         maxSize = 0;
-    var $control = $("#control");
+    var $control = $("#control"),
+        $status = $("#status"),
+        $spans = $("#status p span");
     if (screenWidth > screenHeight) {
         minSize = screenHeight;
         maxSize = screenWidth;
         var diffValue = maxSize - minSize;
         $wrap.css("margin-left", diffValue / 2 + "px");
         $control.css("left", diffValue / 2 + minSize + "px");
-        $control.css("height", Number.parseInt((minSize) / piecesSize) * piecesSize + "px");
+        var heightSize = Number.parseInt((minSize) / piecesSize) * piecesSize + "px";
+        $control.css("height", heightSize);
+        $status.css("right",diffValue / 2 + minSize + 10 + "px");
+        $status.css("height",heightSize);
+        $status.css("width",diffValue / 5 + "px");
+
+        $spans.css("font-size", diffValue / 20 + "px");
+        $spans.css("padding", diffValue / 20 + "px");
+        $spans.css("margin-top", diffValue / 8 + "px");
+        $spans.css("display", "block");
     } else {
         piecesSize = 35;
         minSize = screenWidth;
@@ -57,10 +68,9 @@ window.onload = function() {
         var diffValue = maxSize - minSize;
         $wrap.css("margin-top", diffValue / 2 + "px");
         // 设置状态栏样式
-        var $status = $("#status");
         $status.css("height", diffValue / 2 + "px");
         $status.css("width", minSize + "px");
-        var $spans = $("#status p span");
+
         $spans.css("font-size", diffValue / 8 + "px");
         $spans.css("padding", diffValue / 6 + "px");
         $spans.eq(0).css("padding-left", "20px");
@@ -139,7 +149,7 @@ window.onload = function() {
     });
     //黑棋先下
     player = -1;
-    
+
     canvas2.addEvent("click", function() {
         isReady = true;
     });
