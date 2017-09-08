@@ -1,3 +1,34 @@
+//获取鼠标点击canvas2的相对鼠标坐标
+var mouse;
+//行数和列数,棋子的行数和列数
+var rowNum, colNum;
+//绘制环境1和2,2在上
+var ctx1, ctx2;
+//绘制宽高
+var canWidth, canHeight;
+//棋子大小
+var piecesSize = 20;
+//代表棋盘上每个点的状态,0:无棋子,1:白棋,-1:黑棋
+var envirStatus;
+//当前玩家,1:白方,-1:黑方
+var player;
+//准备完成标志位
+var isReady = false;
+//记录每一步落棋的位置
+var pStack;
+//游戏结束标志位
+var isOver;
+//AI玩家
+var aiPlayer = 1;
+//模式,0:双人,1:单人
+var mode = 1;
+//每一个格子各方向的连子状态,1:白棋,0:黑棋
+var chessStatus;
+//屏幕宽高;
+var screenWidth, screenHeight;
+// 步数,开始时间
+var stepCount, startTime;
+
 window.onload = function() {
     var canvas1 = document.getElementById("canvas1"),
         canvas2 = document.getElementById("canvas2");
@@ -5,21 +36,62 @@ window.onload = function() {
     ctx1 = canvas1.getContext("2d");
     ctx2 = canvas2.getContext("2d");
 
-    canWidth = canvas1.offsetWidth;
-    canHeight = canvas1.offsetHeight;
+    screenWidth = window.innerWidth;
+    screenHeight = window.innerHeight;
 
-    canvas2.addEventListener("click", function(event) {
-        var mouseX = event;
-    }, false);
-    var wrap = document.getElementById("wrap");
-    mouse = captureMouse(wrap);
+    var $wrap = $("#wrap"),
+        minSize = 0,
+        maxSize = 0;
+    var $control = $("#control");
+    if (screenWidth > screenHeight) {
+        minSize = screenHeight;
+        maxSize = screenWidth;
+        var diffValue = maxSize - minSize;
+        $wrap.css("margin-left", diffValue / 2 + "px");
+        $control.css("left", diffValue / 2 + minSize + "px");
+        $control.css("height", Number.parseInt((minSize) / piecesSize) * piecesSize + "px");
+    } else {
+        piecesSize = 35;
+        minSize = screenWidth;
+        maxSize = screenHeight;
+        var diffValue = maxSize - minSize;
+        $wrap.css("margin-top", diffValue / 2 + "px");
+        // 设置状态栏样式
+        var $status = $("#status");
+        $status.css("height", diffValue / 2 + "px");
+        $status.css("width", minSize + "px");
+        var $spans = $("#status p span");
+        $spans.css("font-size", diffValue / 8 + "px");
+        $spans.css("padding", diffValue / 6 + "px");
+        $spans.eq(0).css("padding-left", "20px");
+        // 设置移动版控制面板样式
+        $control.css("top", diffValue / 2 + minSize + "px");
+        $control.css("height", diffValue / 2 + "px");
+        $control.css("width", minSize + "px");
+
+        var $lis = $("#control li");
+        $lis.css("width", minSize / 4 + "px");
+        $lis.css("font-size", diffValue / 20 + "px");
+        $lis.css("margin", "2% 0");
+        $lis.css("float", "left");
+    }
+    canWidth = canHeight = Number.parseInt((minSize) / piecesSize) * piecesSize;
+    canvas1.width = canWidth;
+    canvas1.height = canWidth;
+    canvas2.width = canWidth;
+    canvas2.height = canWidth;
+
+
+    mouse = captureMouse($wrap.get(0));
 
     rowNum = canHeight / piecesSize;
     colNum = canWidth / piecesSize;
+
     //获取并设置各个按钮的效果
     var singleBtn = document.getElementById("single"),
         doubleBtn = document.getElementById("double"),
-        backBtn = document.getElementById("back");
+        backBtn = document.getElementById("back"),
+        resetBtn = document.getElementById("reset");
     singleBtn.addEvent("click", function() {
         aiPlayer = 0;
     });
@@ -49,52 +121,36 @@ window.onload = function() {
             mouse.x = obj.x * piecesSize + piecesSize / 2;
             mouse.y = obj.y * piecesSize + piecesSize / 2;
         }
+        // 返回步数
+        if(aiPlayer){
+            stepCount -= 2;
+        }else{
+            stepCount --;
+        }
+        stepCount == stepCount > 0 ? stepCount : 0;
     });
-    var control = document.getElementById("control"),
-        controlPos = {
-            right: 170 + "px",
-            bottom: 10 + "px"
-        };
-    control.setStyle(controlPos);
+    resetBtn.addEvent("click", function(e) {
+        ctx2.clearRect(0, 0, canWidth, canHeight);
+        stepCount = 0;
+        startTime = null;
+        $("#gameTime").html("时间");
+        $("#stepCount").html("步数");
+        game();
+    });
     //黑棋先下
     player = -1;
+    
     canvas2.addEvent("click", function() {
         isReady = true;
     });
     game();
 };
-//获取鼠标点击canvas2的相对鼠标坐标
-var mouse;
-//行数和列数,棋子的行数和列数
-var rowNum, colNum;
-//绘制环境1和2,2在上
-var ctx1, ctx2;
-//绘制宽高
-var canWidth, canHeight;
-//棋子大小
-var piecesSize = 20;
-//代表棋盘上每个点的状态,0:无棋子,1:白棋,-1:黑棋
-var envirStatus;
-//当前玩家,1:白方,-1:黑方
-var player;
-//准备完成标志位
-var isReady = false;
-//记录每一步落棋的位置
-var pStack;
-//游戏结束标志位
-var isOver;
-//AI玩家
-var aiPlayer = 1;
-//模式,0:双人,1:单人
-var mode = 1;
-//每一个格子各方向的连子状态,1:白棋,0:黑棋
-var chessStatus;
 
 function game() {
     gameInit();
     gameLoop();
 }
-
+//游戏初始化
 function gameInit() {
     drawChessboard(ctx1);
     //初始化环境数组
@@ -132,15 +188,24 @@ function gameInit() {
     //游戏结束标志
     isOver = false;
     isReady = false;
+
+    $("#canvas2").one("click",function(){
+        startTime = new Date().getTime();
+        stepCount = 0;
+        isReady = true;
+    })
 }
 
 var animFrame;
-
+//游戏主循环
 function gameLoop() {
     cancelAnimationFrame(animFrame);
     if (isOver) return;
     animFrame = requestAnimationFrame(gameLoop);
     if (!isReady) return;
+    // 步数，时间
+    $("#stepCount").html("步数 " + stepCount);
+    $("#gameTime").html("时间 " + calTime())
     var x = Math.round(mouse.x / piecesSize - 0.5),
         y = Math.round(mouse.y / piecesSize - 0.5);
     if (!envirStatus[x][y]) {
@@ -148,6 +213,9 @@ function gameLoop() {
         var obj = { x: x, y: y };
         pStack.push(obj);
         player = player === 1 ? -1 : 1;
+        if (player === -1) {
+            stepCount++;
+        }
     }
     drawPieces(ctx2, function() {
         if (checkOver()) {
@@ -159,7 +227,21 @@ function gameLoop() {
         }
     });
 }
-
+// 计算用时
+function calTime() {
+    var curTime = new Date().getTime(),
+        useTime = (curTime - startTime) / 1000,
+        second = Number.parseInt(useTime % 60),
+        minute = Number.parseInt(useTime / 60 % 60),
+        secondStr = "",
+        minuteStr = "";
+    if (second < 10) secondStr = "0";
+    if (minute < 10) minuteStr = "0";
+    secondStr += second;
+    minuteStr += minute;
+    return minuteStr + ":" + secondStr;
+}
+//绘制棋盘
 function drawChessboard(ctx) {
     //绘制开始点，结束点
     var xStart = piecesSize / 2,
@@ -221,6 +303,7 @@ var aiPrefabArr = [],
     maxContX, maxContY;
 var recursiveCont = 0;
 
+//AI落子
 function AIPlay() {
     //检测一行的参数数组
     var argArr = [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: -1, y: 1 }];
@@ -267,7 +350,7 @@ function AIPlay() {
     mouse.x = (maxX + 0.5) * piecesSize;
     mouse.y = (maxY + 0.5) * piecesSize;
 }
-
+//检测一行连接的情况
 function checkLine(x, y, argX, argY, pType) {
     var i;
     var obj = {
@@ -324,7 +407,7 @@ function checkOver() {
     }
     return ret;
 }
-
+//游戏结束
 function gameOver() {
     var dialog = document.createElement("div"),
         dialogStyle = {
@@ -352,6 +435,10 @@ function gameOver() {
             parent = elem.parentNode;
         parent.parentNode.removeChild(parent);
         ctx2.clearRect(0, 0, canWidth, canHeight);
+        stepCount = 0;
+        startTime = null;
+        $("#gameTime").html("时间");
+        $("#stepCount").html("步数");
         game();
     };
     okBtn.setStyle(okBtnStyle);
