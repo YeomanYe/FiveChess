@@ -44,22 +44,31 @@ window.onload = function() {
         maxSize = 0;
     var $control = $("#control"),
         $status = $("#status"),
-        $spans = $("#status p span");
+        $spans = $("#status p span"),
+        $lis = $("#control li");
     if (screenWidth > screenHeight) {
         minSize = screenHeight;
         maxSize = screenWidth;
         var diffValue = maxSize - minSize;
         $wrap.css("margin-left", diffValue / 2 + "px");
+        //设置控制面板样式
         $control.css("left", diffValue / 2 + minSize + "px");
-        var heightSize = Number.parseInt((minSize) / piecesSize) * piecesSize + "px";
-        $control.css("height", heightSize);
-        $status.css("right",diffValue / 2 + minSize + 10 + "px");
-        $status.css("height",heightSize);
-        $status.css("width",diffValue / 5 + "px");
+        var heightSize = Number.parseInt((minSize) / piecesSize) * piecesSize;
+        $control.css("height", heightSize + "px");
+        $control.css("width", heightSize / 4 + "px");
 
-        $spans.css("font-size", diffValue / 20 + "px");
-        $spans.css("padding", diffValue / 20 + "px");
-        $spans.css("margin-top", diffValue / 8 + "px");
+        $lis.css("font-size", heightSize / 32 + "px");
+        $lis.css("padding", "0 " + heightSize / 32 + "px");
+        $lis.css("margin-top", heightSize / 16 + "px");
+        $lis.css("display", "block");
+        //设置状态栏样式
+        $status.css("right", diffValue / 2 + minSize + 10 + "px");
+        $status.css("height", heightSize + "px");
+        $status.css("width", heightSize / 4 + "px");
+
+        $spans.css("font-size", heightSize / 16 + "px");
+        $spans.css("padding", "0 " + heightSize / 16 + "px");
+        $spans.css("margin-top", heightSize / 8 + "px");
         $spans.css("display", "block");
     } else {
         piecesSize = 35;
@@ -72,14 +81,14 @@ window.onload = function() {
         $status.css("width", minSize + "px");
 
         $spans.css("font-size", diffValue / 8 + "px");
-        $spans.css("padding", diffValue / 6 + "px");
+        $spans.css("padding-top", diffValue / 6 + "px");
+        $spans.css("padding-left", diffValue / 12 + "px");
         $spans.eq(0).css("padding-left", "20px");
-        // 设置移动版控制面板样式
+        // 设置控制面板样式
         $control.css("top", diffValue / 2 + minSize + "px");
         $control.css("height", diffValue / 2 + "px");
         $control.css("width", minSize + "px");
 
-        var $lis = $("#control li");
         $lis.css("width", minSize / 4 + "px");
         $lis.css("font-size", diffValue / 20 + "px");
         $lis.css("margin", "2% 0");
@@ -108,45 +117,8 @@ window.onload = function() {
     doubleBtn.addEvent("click", function() {
         aiPlayer = 1;
     });
-    backBtn.addEvent("click", function() {
-        var obj = {};
-        if (!pStack.length) return;
-        //ai存在退两步
-        if (aiPlayer) {
-            obj = pStack.pop();
-            envirStatus[obj.x][obj.y] = 0;
-        }
-        obj = pStack.pop();
-        envirStatus[obj.x][obj.y] = 0;
-        //如果退到了最后一步棋
-        if (!pStack.length) {
-            //必须加，设置了false就退出绘制了
-            ctx2.clearRect(0, 0, canWidth, canHeight);
-            isReady = false;
-        } else {
-            //擦除倒数第三颗并重新绘制
-            obj = pStack.pop();
-            envirStatus[obj.x][obj.y] = 0;
-            player = aiPlayer ? -player : player;
-            mouse.x = obj.x * piecesSize + piecesSize / 2;
-            mouse.y = obj.y * piecesSize + piecesSize / 2;
-        }
-        // 返回步数
-        if(aiPlayer){
-            stepCount -= 2;
-        }else{
-            stepCount --;
-        }
-        stepCount == stepCount > 0 ? stepCount : 0;
-    });
-    resetBtn.addEvent("click", function(e) {
-        ctx2.clearRect(0, 0, canWidth, canHeight);
-        stepCount = 0;
-        startTime = null;
-        $("#gameTime").html("时间");
-        $("#stepCount").html("步数");
-        game();
-    });
+    backBtn.addEvent("click",undo);
+    resetBtn.addEvent("click", gameReset);
     //黑棋先下
     player = -1;
 
@@ -159,6 +131,46 @@ window.onload = function() {
 function game() {
     gameInit();
     gameLoop();
+}
+//悔棋
+function undo() {
+    isOver = false;
+    var obj = {};
+    if (!pStack.length) return;
+    //ai存在退两步
+    if (aiPlayer) {
+        obj = pStack.pop();
+        envirStatus[obj.x][obj.y] = 0;
+    }
+    obj = pStack.pop();
+    envirStatus[obj.x][obj.y] = 0;
+    //如果退到了最后一步棋
+    if (!pStack.length) {
+        gameReset();
+        return;
+    } else {
+        //擦除倒数第三颗并重新绘制
+        obj = pStack.pop();
+        envirStatus[obj.x][obj.y] = 0;
+        player = aiPlayer ? -player : player;
+        mouse.x = obj.x * piecesSize + piecesSize / 2;
+        mouse.y = obj.y * piecesSize + piecesSize / 2;
+    }
+    // 返回步数
+    if (aiPlayer) {
+        stepCount -= 2;
+    } else {
+        stepCount--;
+    }
+}
+//重开游戏
+function gameReset() {
+    ctx2.clearRect(0, 0, canWidth, canHeight);
+    stepCount = 0;
+    startTime = null;
+    $("#gameTime").html("00:00");
+    $("#stepCount").html("0");
+    game();
 }
 //游戏初始化
 function gameInit() {
@@ -199,7 +211,7 @@ function gameInit() {
     isOver = false;
     isReady = false;
 
-    $("#canvas2").one("click",function(){
+    $("#canvas2").one("click", function() {
         startTime = new Date().getTime();
         stepCount = 0;
         isReady = true;
@@ -214,8 +226,8 @@ function gameLoop() {
     animFrame = requestAnimationFrame(gameLoop);
     if (!isReady) return;
     // 步数，时间
-    $("#stepCount").html("步数 " + stepCount);
-    $("#gameTime").html("时间 " + calTime())
+    $("#stepCount").html(stepCount);
+    $("#gameTime").html(calTime())
     var x = Math.round(mouse.x / piecesSize - 0.5),
         y = Math.round(mouse.y / piecesSize - 0.5);
     if (!envirStatus[x][y]) {
@@ -419,46 +431,13 @@ function checkOver() {
 }
 //游戏结束
 function gameOver() {
-    var dialog = document.createElement("div"),
-        dialogStyle = {
-            width: 100 + "px",
-            height: 80 + "px",
-            border: "1px solid black",
-            position: "absolute",
-            top: getWindowSize().height / 2 - 25 + "px",
-            left: getWindowSize().width / 2 - 50 + "px",
-            lineHeight: 40 + "px",
-            fontSize: "15px",
-            textAlign: "center",
-            backgroundColor: "white",
-        };
-    var okBtn = document.createElement("input");
-    okBtn.value = "确定";
-    okBtn.type = "button";
-    var okBtnStyle = {
-        width: 60 + "px",
-        height: 30 + "px"
-    };
-    okBtn.onclick = function(e) {
-        var event = e || window.event,
-            elem = event.currentTarget,
-            parent = elem.parentNode;
-        parent.parentNode.removeChild(parent);
-        ctx2.clearRect(0, 0, canWidth, canHeight);
-        stepCount = 0;
-        startTime = null;
-        $("#gameTime").html("时间");
-        $("#stepCount").html("步数");
-        game();
-    };
-    okBtn.setStyle(okBtnStyle);
-    dialog.setStyle(dialogStyle);
+    var text = "";
     if (player === -1) {
-        dialog.innerText = "白方胜";
+        text = "白方胜";
     } else {
-        dialog.innerText = "黑方胜";
+        text = "黑方胜";
     }
-    dialog.appendChild(okBtn);
     isOver = true;
-    document.body.appendChild(dialog);
+    if (confirm(text)) gameReset();
+    else undo();
 }

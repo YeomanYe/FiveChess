@@ -64,6 +64,7 @@
     }
     #status span{
         display: inline-block;
+        text-align: center;
     }
     </style>
 </head>
@@ -71,8 +72,10 @@
 <body>
     <div id="status">
         <p>
-            <span id="stepCount">步数</span>
-            <span id="gameTime">时间</span>
+            <span>步数</span>
+            <span id="stepCount">0</span>
+            <span>时间</span>
+            <span id="gameTime">00:00</span>
         </p>
     </div>
     <div id="wrap">
@@ -85,12 +88,6 @@
         <li><a id="reset" href="#">重开</a></li>
         <li><a id="back" href="#">悔棋</a></li>
     </ul>
-    <!-- <fieldset id="control">
-        <legend>Menu</legend>
-        <button id="double" class="btn">单人</button>
-        <button id="single" class="btn">双人</button>
-        <button id="back" class="btn">悔棋</button>
-    </fieldset> -->
     <script src="js/zepto.js" type="text/javascript"></script>
     <script src="js/lib.js" type="text/javascript"></script>
     <script src="js/fiveChess.js" type="text/javascript"></script>
